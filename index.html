@@ -16,6 +16,7 @@
             <p class="text-slate-500 mt-2">Статистика и фильтрация в реальном времени. Изменения сохраняются автоматически.</p>
         </header>
 
+        <!-- Статистика -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
                 <div>
@@ -58,6 +59,7 @@
             </div>
         </div>
 
+        <!-- Панель управления -->
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center">
             <div class="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0" id="filter-container">
                 <i class="fa-solid fa-filter text-slate-400 my-auto mr-2 hidden md:block"></i>
@@ -74,16 +76,17 @@
             </div>
         </div>
 
+        <!-- Таблица -->
         <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200">
-                            <th class="p-4 text-sm font-semibold text-slate-600 w-1/3">Имя Гостя</th>
-                            <th class="p-4 text-sm font-semibold text-slate-600">Категория</th>
-                            <th class="p-4 text-sm font-semibold text-slate-600">Пара</th>
-                            <th class="p-4 text-sm font-semibold text-slate-600">Статус</th>
-                            <th class="p-4 text-sm font-semibold text-slate-600 w-1/4">Предпочтения / Алкоголь</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600 w-1/4">Имя Гостя</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600 w-48">Категория</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600 w-1/4">Пара</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600 w-48">Статус</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600">Предпочтения / Алкоголь</th>
                         </tr>
                         <tr class="bg-slate-50 border-b border-slate-200">
                             <th class="px-4 pb-3">
@@ -157,7 +160,7 @@
             { id: 33, category: 'Друзья', name: 'Дмитрий', pair: 'Костина Анастасия', status: 'Подтверждено', diet: 'Вино бел. сухое, Крепкое', comment: 'Жених Анастасии' },
             { id: 34, category: 'Друзья', name: 'Лоза Карина', pair: 'Лоза Матвей', status: 'Подтверждено', diet: 'Не пью', comment: '' },
             { id: 35, category: 'Друзья', name: 'Лоза Матвей', pair: 'Лоза Карина', status: 'Подтверждено', diet: 'Не пью', comment: '' },
-            { id: 36, category: 'Друзья', name: 'Мальцева Светлана', pair: '-', status: 'Подтверждено', diet: 'Не пью', comment: '' },
+            { id: 36, category: 'Друзья', name: 'Светлана Мальцева', pair: '-', status: 'Подтверждено', diet: 'Не пью', comment: '' },
             { id: 37, category: 'Друзья', name: 'Матвей Матвеев', pair: 'Жена Матвея', status: 'Ожидается', diet: '', comment: '' },
             { id: 38, category: 'Друзья', name: 'Жена Матвея', pair: 'Матвей Матвеев', status: 'Ожидается', diet: '', comment: '' },
             { id: 39, category: 'Друзья', name: 'Потапова Екатерина', pair: '-', status: 'Подтверждено', diet: 'Вино бел. полусл./сухое', comment: '' },
@@ -175,14 +178,12 @@
         let guests;
         try {
             const savedData = localStorage.getItem(STORAGE_KEY);
-            // Чтобы применить новые дефолтные данные поверх старых, сбрасываем хранилище при обновлении структуры
             guests = savedData ? JSON.parse(savedData) : defaultGuests;
         } catch (e) { guests = defaultGuests; }
 
         let currentCategory = 'Все';
         let searchQuery = '';
         let columnFilters = { name: '', pair: '', status: 'Все', diet: '' };
-        const filterCategories = ['Все', 'Семья', 'Родственники', 'Друзья', 'Команда'];
         const editCategories = ['Семья', 'Родственники', 'Друзья', 'Команда'];
         const statusOptions = ['Ожидается', 'Подтверждено', 'Отказались'];
 
@@ -196,6 +197,10 @@
             const g = guests.find(i => i.id === id); 
             if(g && el.value.trim()){ g.name = el.value.trim(); saveData(); } else el.value = g.name; 
         };
+        window.updatePair = function(id, el) { 
+            const g = guests.find(i => i.id === id); 
+            if(g){ g.pair = el.value.trim() || '-'; saveData(); } 
+        };
         window.updateStatus = function(id, s) { guests.find(i => i.id === id).status = s; saveData(); render(); };
         window.updateCategory = function(id, c) { guests.find(i => i.id === id).category = c; saveData(); render(); };
         window.updateComment = function(id, el) { guests.find(i => i.id === id).comment = el.value; saveData(); };
@@ -203,17 +208,12 @@
         window.updateColumnFilter = function(f, v) { if(f === 'category') setCategory(v); else { columnFilters[f] = v; renderTable(); }};
 
         function updateStats() {
-            const guestsOnly = guests.filter(g => g.category !== 'Команда');
-            document.getElementById('stat-total').textContent = guestsOnly.length;
+            const gOnly = guests.filter(g => g.category !== 'Команда');
+            document.getElementById('stat-total').textContent = gOnly.length;
             document.getElementById('stat-confirmed').textContent = guests.filter(g => g.status === 'Подтверждено').length;
-            document.getElementById('stat-pending').textContent = guestsOnly.filter(g => g.status === 'Ожидается').length;
-            document.getElementById('stat-declined').textContent = guestsOnly.filter(g => g.status === 'Отказались').length;
+            document.getElementById('stat-pending').textContent = gOnly.filter(g => g.status === 'Ожидается').length;
+            document.getElementById('stat-declined').textContent = gOnly.filter(g => g.status === 'Отказались').length;
             document.getElementById('stat-team').textContent = guests.filter(g => g.category === 'Команда').length;
-        }
-
-        function renderFilters() {
-            filterContainer.innerHTML = `<i class="fa-solid fa-filter text-slate-400 my-auto mr-2 hidden md:block"></i>` + 
-                filterCategories.map(c => `<button onclick="setCategory('${c}')" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentCategory === c ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${c}</button>`).join('');
         }
 
         window.setCategory = function(c) {
@@ -225,17 +225,17 @@
 
         function renderTable() {
             const filtered = guests.filter(g => {
-                const global = g.name.toLowerCase().includes(searchQuery.toLowerCase()) || (g.comment && g.comment.toLowerCase().includes(searchQuery.toLowerCase()));
+                const glob = g.name.toLowerCase().includes(searchQuery.toLowerCase()) || (g.comment && g.comment.toLowerCase().includes(searchQuery.toLowerCase()));
                 const cat = currentCategory === 'Все' || g.category === currentCategory;
-                const colName = g.name.toLowerCase().includes(columnFilters.name.toLowerCase()) || (g.comment && g.comment.toLowerCase().includes(columnFilters.name.toLowerCase()));
-                const colPair = g.pair.toLowerCase().includes(columnFilters.pair.toLowerCase());
-                const colStat = columnFilters.status === 'Все' || g.status === columnFilters.status;
-                const colDiet = (g.diet || '').toLowerCase().includes(columnFilters.diet.toLowerCase());
-                return global && cat && colName && colPair && colStat && colDiet;
+                const colN = g.name.toLowerCase().includes(columnFilters.name.toLowerCase()) || (g.comment && g.comment.toLowerCase().includes(columnFilters.name.toLowerCase()));
+                const colP = g.pair.toLowerCase().includes(columnFilters.pair.toLowerCase());
+                const colS = columnFilters.status === 'Все' || g.status === columnFilters.status;
+                const colD = (g.diet || '').toLowerCase().includes(columnFilters.diet.toLowerCase());
+                return glob && cat && colN && colP && colS && colD;
             });
 
             tableBody.innerHTML = filtered.length ? filtered.map(g => {
-                const sColor = g.status === 'Подтверждено' ? 'bg-green-100 text-green-800' : g.status === 'Отказались' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
+                const sCol = g.status === 'Подтверждено' ? 'bg-green-100 text-green-800' : g.status === 'Отказались' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
                 return `
                 <tr class="hover:bg-slate-50 transition-colors">
                     <td class="p-4">
@@ -245,9 +245,11 @@
                     <td class="p-4">
                         <select onchange="updateCategory(${g.id}, this.value)" class="px-2 py-1 border border-slate-200 rounded text-xs font-medium bg-white">${editCategories.map(c => `<option value="${c}" ${g.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
                     </td>
-                    <td class="p-4 text-sm text-slate-600">${g.pair !== '-' ? g.pair : '<span class="text-slate-300">—</span>'}</td>
                     <td class="p-4">
-                        <select onchange="updateStatus(${g.id}, this.value)" class="px-3 py-1 rounded-full text-xs font-medium border-none ${sColor}">${statusOptions.map(s => `<option value="${s}" ${g.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
+                        <input type="text" value="${g.pair}" onblur="updatePair(${g.id}, this)" placeholder="—" class="text-sm text-slate-600 bg-transparent border-b border-dashed border-transparent hover:border-slate-300 focus:outline-none focus:border-slate-800 w-full py-0.5">
+                    </td>
+                    <td class="p-4">
+                        <select onchange="updateStatus(${g.id}, this.value)" class="px-3 py-1 rounded-full text-xs font-medium border-none ${sCol}">${statusOptions.map(s => `<option value="${s}" ${g.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
                     </td>
                     <td class="p-4">
                         <input type="text" value="${g.diet || ''}" onblur="updateDiet(${g.id}, this)" placeholder="Алкоголь..." class="w-full bg-transparent border-b border-dashed border-slate-300 text-xs focus:outline-none py-1 ${g.diet ? 'text-indigo-700 font-medium' : 'text-slate-500'}">
@@ -256,7 +258,13 @@
             }).join('') : `<tr><td colspan="5" class="p-8 text-center text-slate-500">Гости не найдены</td></tr>`;
         }
 
-        function render() { updateStats(); renderFilters(); renderTable(); }
+        function render() { 
+            updateStats(); 
+            const btns = ['Все', 'Семья', 'Родственники', 'Друзья', 'Команда'];
+            filterContainer.innerHTML = `<i class="fa-solid fa-filter text-slate-400 my-auto mr-2 hidden md:block"></i>` + 
+                btns.map(c => `<button onclick="setCategory('${c}')" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentCategory === c ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">${c}</button>`).join('');
+            renderTable(); 
+        }
         searchInput.addEventListener('input', (e) => { searchQuery = e.target.value; renderTable(); });
         render();
     </script>
