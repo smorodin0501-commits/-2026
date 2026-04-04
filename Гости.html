@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление списком гостей</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 font-sans min-h-screen p-6 md:p-10">
+
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <header>
+            <h1 class="text-3xl font-bold text-slate-900">Управление списком гостей</h1>
+            <p class="text-slate-500 mt-2">Статистика и фильтрация в реальном времени. Изменения сохраняются автоматически.</p>
+        </header>
+
+        <!-- Статистика -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Всего гостей</p>
+                    <p id="stat-total" class="text-3xl font-bold text-slate-900 mt-1">0</p>
+                </div>
+                <div class="p-3 bg-blue-50 rounded-lg"><i class="fa-solid fa-users text-blue-600 text-xl"></i></div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Подтвердили</p>
+                    <p id="stat-confirmed" class="text-3xl font-bold text-green-600 mt-1">0</p>
+                </div>
+                <div class="p-3 bg-green-50 rounded-lg"><i class="fa-solid fa-circle-check text-green-600 text-xl"></i></div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Ожидают</p>
+                    <p id="stat-pending" class="text-3xl font-bold text-amber-500 mt-1">0</p>
+                </div>
+                <div class="p-3 bg-amber-50 rounded-lg"><i class="fa-solid fa-clock text-amber-600 text-xl"></i></div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Отказались</p>
+                    <p id="stat-declined" class="text-3xl font-bold text-red-500 mt-1">0</p>
+                </div>
+                <div class="p-3 bg-red-50 rounded-lg"><i class="fa-solid fa-user-xmark text-red-600 text-xl"></i></div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between col-span-2 md:col-span-1">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">Команда</p>
+                    <p id="stat-team" class="text-3xl font-bold text-slate-700 mt-1">0</p>
+                </div>
+                <div class="p-3 bg-slate-100 rounded-lg"><i class="fa-solid fa-briefcase text-slate-600 text-xl"></i></div>
+            </div>
+        </div>
+
+        <!-- Панель управления -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div class="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0" id="filter-container">
+                <i class="fa-solid fa-filter text-slate-400 my-auto mr-2 hidden md:block"></i>
+                <!-- Кнопки фильтров генерируются в JS -->
+            </div>
+
+            <div class="relative w-full md:w-72">
+                <i class="fa-solid fa-search text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Глобальный поиск..."
+                    class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                >
+            </div>
+        </div>
+
+        <!-- Таблица -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="p-4 text-sm font-semibold text-slate-600 w-1/3">Имя Гостя</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600">Категория</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600">Пара</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600">Статус</th>
+                            <th class="p-4 text-sm font-semibold text-slate-600 w-1/5">Диета / Заметки</th>
+                        </tr>
+                        <!-- Строка с фильтрами для каждого столбца -->
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                            <th class="px-4 pb-3">
+                                <input type="text" oninput="updateColumnFilter('name', this.value)" placeholder="Поиск по имени..." class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded outline-none focus:border-slate-400 font-normal">
+                            </th>
+                            <th class="px-4 pb-3">
+                                <select id="col-filter-category" onchange="updateColumnFilter('category', this.value)" class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded outline-none focus:border-slate-400 font-normal bg-white cursor-pointer">
+                                    <option value="Все">Все</option>
+                                    <option value="Семья">Семья</option>
+                                    <option value="Родственники">Родственники</option>
+                                    <option value="Друзья">Друзья</option>
+                                    <option value="Команда">Команда</option>
+                                </select>
+                            </th>
+                            <th class="px-4 pb-3">
+                                <input type="text" oninput="updateColumnFilter('pair', this.value)" placeholder="Поиск пары..." class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded outline-none focus:border-slate-400 font-normal">
+                            </th>
+                            <th class="px-4 pb-3">
+                                <select onchange="updateColumnFilter('status', this.value)" class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded outline-none focus:border-slate-400 font-normal bg-white cursor-pointer">
+                                    <option value="Все">Все статусы</option>
+                                    <option value="Ожидается">Ожидается</option>
+                                    <option value="Подтверждено">Подтверждено</option>
+                                    <option value="Отказались">Отказались</option>
+                                </select>
+                            </th>
+                            <th class="px-4 pb-3">
+                                <input type="text" oninput="updateColumnFilter('diet', this.value)" placeholder="Поиск по диете..." class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded outline-none focus:border-slate-400 font-normal">
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-100">
+                        <!-- Строки генерируются в JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Исходные данные по умолчанию
+        const defaultGuests = [
+            { id: 1, category: 'Семья', name: 'Александров Андрей', pair: '-', status: 'Ожидается', diet: '', comment: 'Папа' },
+            { id: 2, category: 'Семья', name: 'Александров Александр', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 3, category: 'Семья', name: 'Тетя Елена', pair: 'Муж Сергей', status: 'Ожидается', diet: '', comment: '' },
+            { id: 4, category: 'Семья', name: 'Муж Сергей', pair: 'Тетя Елена', status: 'Ожидается', diet: '', comment: '' },
+            { id: 5, category: 'Семья', name: 'Смородин Анатолий', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 6, category: 'Семья', name: 'Смородин Николай', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 7, category: 'Семья', name: 'Смородина Наталья', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 8, category: 'Семья', name: 'Смородина Зоя', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 9, category: 'Родственники', name: 'Аверкиев Владимир', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 10, category: 'Родственники', name: 'Аверкиев Даниил', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 11, category: 'Родственники', name: 'Аверкиев Илья', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 12, category: 'Родственники', name: 'Березовская Ольга', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 13, category: 'Родственники', name: 'Березовская Дарьяна', pair: 'Габр', status: 'Ожидается', diet: '', comment: '' },
+            { id: 14, category: 'Родственники', name: 'Габр', pair: 'Березовская Дарьяна', status: 'Ожидается', diet: '', comment: 'Жених Дарьяны' },
+            { id: 15, category: 'Родственники', name: 'Груздева Ольга', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 16, category: 'Родственники', name: 'Груздев Роман', pair: 'Груздева Анастасия', status: 'Ожидается', diet: '', comment: '' },
+            { id: 17, category: 'Родственники', name: 'Груздева Анастасия', pair: 'Груздев Роман', status: 'Ожидается', diet: '', comment: '' },
+            { id: 18, category: 'Родственники', name: 'Комаров Артем', pair: '-', status: 'Ожидается', diet: '', comment: 'Уточнить пару' },
+            { id: 19, category: 'Родственники', name: 'Комарова Елизавета', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 20, category: 'Родственники', name: 'Комарова Ольга', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 21, category: 'Родственники', name: 'Васюков Иван', pair: 'Васюкова Анна', status: 'Ожидается', diet: '', comment: '' },
+            { id: 22, category: 'Родственники', name: 'Васюкова Анна', pair: 'Васюков Иван', status: 'Ожидается', diet: '', comment: '' },
+            { id: 23, category: 'Друзья', name: 'Анисимова Дарья', pair: 'Никита', status: 'Ожидается', diet: '', comment: '' },
+            { id: 24, category: 'Друзья', name: 'Никита', pair: 'Анисимова Дарья', status: 'Ожидается', diet: '', comment: 'Жених Дарьи' },
+            { id: 25, category: 'Друзья', name: 'Артюх Мария', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 26, category: 'Друзья', name: 'Афанасьева Арина', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 27, category: 'Друзья', name: 'Габитова Елена', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 28, category: 'Друзья', name: 'Зубенин Георгий', pair: 'Жена Георгия', status: 'Ожидается', diet: '', comment: '' },
+            { id: 29, category: 'Друзья', name: 'Жена Георгия', pair: 'Зубенин Георгий', status: 'Ожидается', diet: '', comment: '' },
+            { id: 30, category: 'Друзья', name: 'Емельянов Максим', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 31, category: 'Друзья', name: 'Казакова Снежана', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 32, category: 'Друзья', name: 'Костина Анастасия', pair: 'Дмитрий', status: 'Ожидается', diet: '', comment: '' },
+            { id: 33, category: 'Друзья', name: 'Дмитрий', pair: 'Костина Анастасия', status: 'Ожидается', diet: '', comment: 'Жених Анастасии' },
+            { id: 34, category: 'Друзья', name: 'Лоза Карина', pair: 'Лоза Матвей', status: 'Ожидается', diet: '', comment: '' },
+            { id: 35, category: 'Друзья', name: 'Лоза Матвей', pair: 'Лоза Карина', status: 'Ожидается', diet: '', comment: '' },
+            { id: 36, category: 'Друзья', name: 'Мальцева Светлана', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 37, category: 'Друзья', name: 'Матвей Матвеев', pair: 'Жена Матвея', status: 'Ожидается', diet: '', comment: '' },
+            { id: 38, category: 'Друзья', name: 'Жена Матвея', pair: 'Матвей Матвеев', status: 'Ожидается', diet: '', comment: '' },
+            { id: 39, category: 'Друзья', name: 'Потапова Екатерина', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 40, category: 'Друзья', name: 'Пычков Евгений', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 41, category: 'Друзья', name: 'Сабир', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 42, category: 'Друзья', name: 'Сушина Татьяна', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 43, category: 'Друзья', name: 'Шнидорова Анастасия', pair: '-', status: 'Ожидается', diet: '', comment: '' },
+            { id: 44, category: 'Команда', name: 'Ведущий', pair: '-', status: 'Подтверждено', diet: 'Staff Meal', comment: '' },
+            { id: 45, category: 'Команда', name: 'Фотограф', pair: '-', status: 'Подтверждено', diet: 'Staff Meal', comment: '' },
+            { id: 46, category: 'Команда', name: 'Видеограф', pair: '-', status: 'Подтверждено', diet: 'Staff Meal', comment: '' },
+            { id: 47, category: 'Команда', name: 'Диджей', pair: '-', status: 'Подтверждено', diet: 'Staff Meal', comment: '' },
+        ];
+
+        // Инициализация хранилища
+        const STORAGE_KEY = 'wedding_guests_data_v2';
+        let guests;
+        try {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            guests = savedData ? JSON.parse(savedData) : defaultGuests;
+        } catch (e) {
+            console.warn('LocalStorage недоступен, используются данные по умолчанию.');
+            guests = defaultGuests;
+        }
+
+        // Состояние приложения
+        let currentCategory = 'Все';
+        let searchQuery = '';
+        let columnFilters = { name: '', pair: '', status: 'Все', diet: '' };
+        
+        const filterCategories = ['Все', 'Семья', 'Родственники', 'Друзья', 'Команда'];
+        const editCategories = ['Семья', 'Родственники', 'Друзья', 'Команда'];
+        const statusOptions = ['Ожидается', 'Подтверждено', 'Отказались'];
+
+        // DOM элементы
+        const tableBody = document.getElementById('table-body');
+        const filterContainer = document.getElementById('filter-container');
+        const searchInput = document.getElementById('search-input');
+
+        // Логика сохранения
+        function saveData() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(guests));
+            } catch (e) {
+                console.warn('Не удалось сохранить данные в localStorage');
+            }
+        }
+
+        // Функции обновления данных (вызываются из HTML)
+        window.updateName = function(id, inputElement) {
+            const guest = guests.find(g => g.id === id);
+            if (guest && inputElement.value.trim() !== '') {
+                guest.name = inputElement.value.trim();
+                saveData();
+            } else if (guest) {
+                inputElement.value = guest.name; // Откат, если поле пустое
+            }
+        };
+
+        window.updateStatus = function(id, newStatus) {
+            const guest = guests.find(g => g.id === id);
+            if (guest) {
+                guest.status = newStatus;
+                saveData();
+                render();
+            }
+        };
+
+        window.updateCategory = function(id, newCategory) {
+            const guest = guests.find(g => g.id === id);
+            if (guest) {
+                guest.category = newCategory;
+                saveData();
+                render();
+            }
+        };
+
+        window.updateComment = function(id, inputElement) {
+            const guest = guests.find(g => g.id === id);
+            if (guest) {
+                guest.comment = inputElement.value;
+                saveData();
+            }
+        };
+
+        window.updateDiet = function(id, inputElement) {
+            const guest = guests.find(g => g.id === id);
+            if (guest) {
+                guest.diet = inputElement.value;
+                saveData();
+                render(); // Требуется ререндер для обновления стилей
+            }
+        };
+
+        // Обновление фильтров по колонкам
+        window.updateColumnFilter = function(field, value) {
+            if (field === 'category') {
+                setCategory(value);
+            } else {
+                columnFilters[field] = value;
+                renderTable();
+            }
+        };
+
+        // Обновление статистики (учитывает команду в подтвержденных)
+        function updateStats() {
+            const onlyGuests = guests.filter(g => g.category !== 'Команда');
+            const team = guests.filter(g => g.category === 'Команда');
+            
+            document.getElementById('stat-total').textContent = onlyGuests.length;
+            // Команда теперь учитывается в общей сумме подтвержденных
+            document.getElementById('stat-confirmed').textContent = guests.filter(g => g.status === 'Подтверждено').length;
+            document.getElementById('stat-pending').textContent = onlyGuests.filter(g => g.status === 'Ожидается').length;
+            document.getElementById('stat-declined').textContent = onlyGuests.filter(g => g.status === 'Отказались').length;
+            document.getElementById('stat-team').textContent = team.length;
+        }
+
+        // Рендеринг кнопок фильтров (глобальных)
+        function renderFilters() {
+            const buttonsHtml = filterCategories.map(cat => `
+                <button
+                    onclick="setCategory('${cat}')"
+                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                        currentCategory === cat 
+                            ? 'bg-slate-900 text-white' 
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }"
+                >
+                    ${cat}
+                </button>
+            `).join('');
+            
+            const iconHtml = `<i class="fa-solid fa-filter text-slate-400 my-auto mr-2 hidden md:block"></i>`;
+            filterContainer.innerHTML = iconHtml + buttonsHtml;
+        }
+
+        // Установка категории синхронизирует верхние кнопки и фильтр столбца
+        window.setCategory = function(cat) {
+            currentCategory = cat;
+            const colSelect = document.getElementById('col-filter-category');
+            if(colSelect) colSelect.value = cat;
+            render();
+        };
+
+        // Рендеринг таблицы с учетом всех фильтров
+        function renderTable() {
+            const filteredGuests = guests.filter(guest => {
+                // Глобальные фильтры
+                const matchesSearch = guest.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                      (guest.comment && guest.comment.toLowerCase().includes(searchQuery.toLowerCase()));
+                const matchesCategory = currentCategory === 'Все' || guest.category === currentCategory;
+                
+                // Фильтры столбцов
+                const matchesColName = guest.name.toLowerCase().includes(columnFilters.name.toLowerCase()) || 
+                                       (guest.comment && guest.comment.toLowerCase().includes(columnFilters.name.toLowerCase()));
+                const matchesColPair = guest.pair.toLowerCase().includes(columnFilters.pair.toLowerCase());
+                const matchesColStatus = columnFilters.status === 'Все' || guest.status === columnFilters.status;
+                const matchesColDiet = (guest.diet || '').toLowerCase().includes(columnFilters.diet.toLowerCase());
+
+                return matchesSearch && matchesCategory && matchesColName && matchesColPair && matchesColStatus && matchesColDiet;
+            });
+
+            if (filteredGuests.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500">Гости не найдены</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = filteredGuests.map(guest => {
+                // Генерация опций для селектора статуса
+                const statusSelectOptions = statusOptions.map(s => 
+                    `<option value="${s}" ${guest.status === s ? 'selected' : ''}>${s}</option>`
+                ).join('');
+
+                // Определение цвета для текущего статуса
+                const statusColor = guest.status === 'Подтверждено' ? 'bg-green-100 text-green-800' : 
+                                    guest.status === 'Отказались' ? 'bg-red-100 text-red-800' : 
+                                    'bg-amber-100 text-amber-800';
+
+                // Генерация опций для селектора категории
+                const categorySelectOptions = editCategories.map(c => 
+                    `<option value="${c}" ${guest.category === c ? 'selected' : ''}>${c}</option>`
+                ).join('');
+
+                return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="p-4">
+                        <input type="text" 
+                               value="${guest.name}" 
+                               onblur="updateName(${guest.id}, this)"
+                               class="font-medium text-slate-900 bg-transparent border-b border-dashed border-transparent hover:border-slate-300 focus:outline-none focus:border-slate-800 w-full py-0.5">
+                        
+                        <input type="text" 
+                               value="${guest.comment || ''}" 
+                               onblur="updateComment(${guest.id}, this)" 
+                               placeholder="Указать роль или комментарий..." 
+                               class="w-full mt-1 bg-transparent border-b border-dashed border-slate-300 text-xs text-slate-500 focus:outline-none focus:border-slate-800 placeholder-slate-300 py-0.5">
+                    </td>
+                    <td class="p-4">
+                        <select onchange="updateCategory(${guest.id}, this.value)" 
+                                class="px-2 py-1 border border-slate-200 rounded text-xs font-medium cursor-pointer outline-none bg-white focus:border-slate-400">
+                            ${categorySelectOptions}
+                        </select>
+                    </td>
+                    <td class="p-4 text-sm text-slate-600">
+                        ${guest.pair !== '-' ? guest.pair : '<span class="text-slate-300">—</span>'}
+                    </td>
+                    <td class="p-4">
+                        <select onchange="updateStatus(${guest.id}, this.value)" 
+                                class="px-3 py-1 rounded-full text-xs font-medium cursor-pointer outline-none border-none ${statusColor}">
+                            ${statusSelectOptions}
+                        </select>
+                    </td>
+                    <td class="p-4">
+                        <input type="text" 
+                               value="${guest.diet || ''}" 
+                               onblur="updateDiet(${guest.id}, this)" 
+                               placeholder="Добавить..." 
+                               class="w-full bg-transparent border-b border-dashed border-slate-300 text-xs focus:outline-none focus:border-slate-800 py-1 ${guest.diet ? 'text-red-700 font-medium' : 'text-slate-500'}">
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        // Главная функция рендера
+        function render() {
+            updateStats();
+            renderFilters();
+            renderTable();
+        }
+
+        // Слушатель событий для глобального поиска
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderTable(); 
+        });
+
+        // Первичный запуск
+        render();
+    </script>
+</body>
+</html>
