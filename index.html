@@ -11,9 +11,15 @@
 
     <div class="max-w-7xl mx-auto space-y-8">
         
-        <header>
-            <h1 class="text-3xl font-bold text-slate-900">Управление списком гостей</h1>
-            <p class="text-slate-500 mt-2">Статистика и фильтрация в реальном времени. Изменения сохраняются автоматически.</p>
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900">Управление списком гостей</h1>
+                <p class="text-slate-500 mt-2">Статистика и фильтрация в реальном времени. Изменения сохраняются автоматически.</p>
+            </div>
+            <button onclick="addNewGuest()" class="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95">
+                <i class="fa-solid fa-plus"></i>
+                Добавить гостя
+            </button>
         </header>
 
         <!-- Статистика -->
@@ -192,6 +198,22 @@
         const searchInput = document.getElementById('search-input');
 
         function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(guests)); }
+
+        window.addNewGuest = function() {
+            const newId = guests.length > 0 ? Math.max(...guests.map(g => g.id)) + 1 : 1;
+            const newGuest = {
+                id: newId,
+                category: 'Друзья',
+                name: 'Новый гость',
+                pair: '-',
+                status: 'Ожидается',
+                diet: '',
+                comment: ''
+            };
+            guests.unshift(newGuest);
+            saveData();
+            render();
+        };
 
         window.updateName = function(id, el) { 
             const g = guests.find(i => i.id === id); 
